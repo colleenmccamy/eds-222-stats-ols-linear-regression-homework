@@ -1,0 +1,214 @@
+---
+title: "EDS 222: Assignment 03 (due: Nov 1, 9am)"
+author: "Colleen McCamy"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Load all the packages needed here
+library(tidyverse)
+library(readr)
+library(gt)
+library(tufte)
+
+# Set your filepath here! Or, set this up as an .Rproj if you'd like.
+rootdir <- ("/Users/colleenmccamy/Documents/MEDS/EDS_222_Stats")
+datadir <- file.path(rootdir,"data","HW3")
+setwd(file.path(rootdir,"homework"))
+```
+
+# Question 1: Some math with Ordinary Least Squares
+
+We will rely on `R` to implement all the heavy lifting of OLS, but it's essential that you understand what is happening beneath the hood of canned linear regression commands so that you can accurately design, execute, and interpret regressions. These questions ask you to probe the algebra of least squares so that you can see some of the mechanics behind `lm()` and other linear regression packages in `R` and beyond.
+
+Consider a simple linear regression model:
+
+$$y_i = \beta_0 + \beta_1 x_i + u_i$$ Recall the definitions of the OLS estimate of the intercept and slope coefficients:
+
+$$\hat{\beta}_1 = \dfrac{\sum_i (x_i - \overline{x})(y_i - \overline{y})}{\sum_i (x_i - \overline{x})^2} = \frac{cov(x,y)}{var(x)}$$
+
+$$ \hat{\beta}_0 = \overline{y} - \hat{\beta}_1 \overline{x} $$ Using these definitions, show mathematically how $\hat\beta_0$ and $\hat\beta_1$ change under the following scenarios.[^1] Give some intuition for your answers. If your answers differ across scenarios, why do they? If not, why not?
+
+[^1]: Note that these kinds of scenarios occur in practice all the time when we change units of measurement.
+
+-   Scenario 1: all observations of the independent variable are multiplied by 3
+
+$$\hat{\beta}_1 = \dfrac{\sum_i 3(x_i - \overline{x})(y_i - \overline{y})}{\sum_i (3x_i - \overline{x})^2} = \frac{cov(3x,y)}{var(9x)} = \frac{3cov(x,y)} {9var(x)} = \frac{cov(x,y)}{3var(x)}$$\
+**If all observations of the independent variable are multiplied by 3 then** $$/hat{\beta}_1$$ **would decrease by 3 given the equation above. However** $$\\beta_0$$ **would stay the same since changing the x values do not affect beta knot given the equation of a linear regression and solving for beta hat. This makes intuitive sense as the x values are multiplied it would stretch the the plot horizontally. Given the equation for slope it would make sense that this would decrease the slope as the line would be less steep when stretched horizontally.**
+
+-   Scenario 2: all observations of the dependent variable are multiplied by 3
+
+$$\hat{\beta}_1 = \dfrac{\sum_i (x_i - \overline{x})(3y_i - \overline{y})}{\sum_i (x_i - \overline{x})^2} = \frac{cov(x,3y)}{var(x)} = \frac{3cov(x,y)}{var(x)}$$ **If all observations of the dependent variable are multiplied by 3 then** $$/hat{\beta}_1$$ **would increase by 3. Therefore if** $$\\beta_0$$
+
+**would increase given the equation of a linear regression and solving for beta knot. This also make sense as the y values are multiplied the corresponding values for y are stretched and thus beta knot would also be stretched and multiplied by 3.**
+
+-   Scenario 3: All observations of both the independent and dependent variables are multiplied by 3
+
+**Based on the equations,** $$/hat{\beta}_1$$
+
+**would stay the same as it would add a 9 to both the numerator and denominator. Also, inutitively the slope stays the same as the values get stretched equally horizontally and vertically. Thus, not affecting the steepness of the line.**
+
+**However for** $$\\beta_0$$
+
+**this would still be multiplied by 3 as it is the y-intercept. Given that the intercept is the y-value when x is zero, multiplying x values do not have an affect on beta knot and beta knot is only affected by the multiplication of 3 for the y-values. Therefore the new value of beta knot would be the original beta knot times 3.**
+
+# Question 2: Forest fires and temperature
+
+The data provided for this assignment, called `forestfires.rds`, is a dataset of daily forest fire area burned in the northeast region of Portugal and meteorological conditions on the recorded day (data was constructed from [here](http://www3.dsi.uminho.pt/pcortez/forestfires/)). The goal of assembling this dataset was to evaluate if weather conditions, such as temperature and air humidity, can predict area burned and inform fire management decisions. Each observation is a daily observation of forest fire are burned and set of associated daily weather variables, all of which are detailed in the provided README.txt file.
+
+The original documentation of the dataset can be found in [Cortez and Morais, 2007](http://www3.dsi.uminho.pt/pcortez/fires.pdf). For more information on the other variables from the Fire Weather Index (FWI), please see [here](https://www.nwcg.gov/publications/pms437/cffdrs/fire-weather-index-system#TOC-FWI-Fuel-Moisture-Codes).
+
+## Question 2.1
+
+In this homework, we are interested in the relationship between temperature and area burned.
+
+-   To begin to understand this relationship, make a scatter plot showing area burned ($y$-axis) as it relates to temperature ($x$-axis) and discuss the general relationship. Do you see a positive or negative correlation? Does that make intuitive sense to you? How strong does the correlation appear to be?
+
+**There appears to be a very slight positive relationship between area burned and temperature such that as temperature increases the burned area also increases. This is intuitive to me as it is make sense that when temperature increases insensitivity of scope of the fire range should increase. However, this correlation does not appear to be very strong. And the R\^2 coefficient shows that it is not too strong of a correlation - only 0.2788. This lower correlation could be caused by some of the outliers.**
+
+```{r}
+
+data_fire_port <- read_rds("/Users/colleenmccamy/Documents/MEDS/EDS_222_Stats/data/HW3/forestfires.rds")
+
+ggplot(data = data_fire_port, aes(x = temp, y = area)) +
+  geom_point() +
+  theme_minimal() +
+  labs(x = "Temperature (C)",
+       y = "Area (hectacres)")
+
+
+summary(lm(area ~ temp, data = data_fire_port))
+
+```
+
+## Question 2.2
+
+Use the `lm()` command to estimate the following simple linear regression:
+
+$$ \text{area_burned}_i = \beta_0 + \beta_1 \text{temp}_i + \varepsilon_i $$ Display your estimated intercept and slope coefficients using `summary()`, `gt()`, or `kable()`. Interpret each coefficient in words, and then answer the following:
+
+```{r}
+
+linear_reg_output <- summary(lm(area ~ temp, data = data_fire_port))
+linear_reg_output
+
+```
+
+**Answer: At zero degrees Celsius, the model predicts that an average of 14.77 hectacres are burned. Then for each temperature increase of one degrees Celsius, the model predicts that a 12.26 hectacres are burned.**
+
+-   How many hectares do you predict will be burned on a day that is 1 degrees Celsius? **Based on the linear regression model, I would predict that 27.0337 hectares will be burned on a day that is 1 degrees Celsius.**
+
+```{r}
+
+B0_temp_fire <- 14.7769
+B1_temp_fire <- 12.2568
+
+area_burned_1degree <- B0_temp_fire + (B1_temp_fire * 1)
+area_burned_1degree
+  
+```
+
+-   How many hectares do you predict will be burned on a day that is 28 degrees Celsius?
+
+**Based on the linear regression model, I would predict that 357.97 hectacres would be burned at 28 degrees Celsius.**
+
+```{r}
+
+area_burned_28degrees <- B0_temp_fire + (B1_temp_fire * 28)
+area_burned_28degrees 
+
+```
+
+-   How many more hectares do you predict will be burned on a day in winter at 12 degrees Celsius as compared to a hot summer day at 30 degrees Celsius?
+
+**Based on the model I would predict a 220.62 hectarce difference from 12 degrees Celsius in the winter to 30 degrees Celsius on a hot summer day.**
+
+```{r}
+
+area_burned_12degree <- B0_temp_fire + (B1_temp_fire * 12)
+area_burned_30degree <- B0_temp_fire + (B1_temp_fire * 30)
+
+seasonal_difference <- area_burned_30degree - area_burned_12degree
+seasonal_difference
+
+```
+
+## Question 2.3
+
+The `area` variable covers a range of zero to 1371.923 (units: hectares). Based on the math you showed in Question 1, how do you expect your coefficients to change if you rescale this variable to acres (one hectare is about 2.47 acres)?
+
+**Based on the explanations above, both beta hat and beta knot would increase by 2.47 as the y axis would essentially be stretched further and scaled. Thus, affecting both the intercept and slope coefficient for temperature and area burned.**
+
+Implement this rescaling and show your new coefficients. Does your math align with your new coefficients? **Yes, this matches the original assumptions that the beta knot and beta hat were multiplied by 2.47 within the lm summary.**
+
+```{r}
+
+#mutating the data to be in acres instead of hectares
+data_fire_port_acres<- data_fire_port |> 
+  mutate(area_acres = area * 2.47)
+
+acre_regression <- summary(lm(area_acres ~ temp, data = data_fire_port_acres))
+acre_regression
+
+```
+
+## Question 2.4
+
+Using your original regression model with the original `temp` variable, use `geom_smooth()` in `ggplot()` to visualize your regression line, overlaid on your scatter plot. Use `se=FALSE` to suppress standard errors; we will dig into those soon!
+
+How well do you think your model is fitting the data? **The model fits the data pretty well for the most part. However, the model would not be able to predict the outliers when temperature is high or low.**
+
+```{r}
+
+linear_regression_plot <- ggplot(data = data_fire_port, aes(x = temp, y = area)) +
+  geom_point(alpha = 0.4,
+             color = "#000934") +
+  geom_smooth(method = "lm",
+              formula = y~x,
+              se = FALSE,
+              size = 1.5,
+              color = "#3f676e",
+              alpha = 0.7) +
+  theme_minimal()
+linear_regression_plot
+
+```
+
+Compute the coefficient of determination ($R^2$), or report it based on the regression results you saved above. What percent of variation in area burned are explained by temperature? Does this align with your intuition based on the scatter plot?
+
+```{r}
+
+acre_r_squared <- ((acre_regression)$r.squared)
+
+print(acre_r_squared)
+
+```
+
+**27.8 percent of variation in the area burned can be explained by temperature. I would expect there to be a higher correlation between temperature and fire burned but this could be pulled down by other factors such as humidity. Also the model shows that is a larger variation which would decrease the value of r-squared.**
+
+## Question 2.5
+
+Due to complex climatological phenomena, days with high temperatures tend to coincide with days that are also different in other dimensions. For example, hot days tend to be less rainy, with lower wind, and of higher or lower humidity, depending on the geographic location. This raises the concern of **omitted variables bias**, as these variables may also be correlated with area burned.
+
+To address this concern, add relative humidity (`RH`) as an independent variable to your linear regression model, in addition to temperature. Display your estimated intercept and slope coefficients using `summary()`, `gt()`, or `kable()`. Interpret your slope coefficient on temperature in words.
+
+-   Why is your coefficient similar or different from the estimate you recovered above in the simple linear regression?
+-   Is there evidence of omitted variables bias?
+
+**Answer: In adding relative humidity to the model it increased the slope coefficient for temperature indicating that for every 1 degree C increase an average of burned area to 12.878 acres. As these variables are a very small increase and thus it shows that relative humidity has a minor affect in increasing area burned but not enough of an effect to cause substantial omitted variables bias when excluded from the model.**
+
+```{r}
+
+linear_reg_output_humidity <- summary(lm(area ~ temp + RH, data = data_fire_port))
+linear_reg_output_humidity
+
+```
